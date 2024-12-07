@@ -50,10 +50,10 @@ class DynButtons:
             dict(filter(lambda x: x[1].default is not Signature.empty, params.items())))
 
         if diff := set(casted_kwargs) - set(required_params) - set(optional_params):
-            raise ValueError(f"Function has no parameters `{", ".join(diff)}`")
+            raise ValueError(f"Function has no parameters `{', '.join(diff)}`")
 
         if diff := set(required_params.keys()) - set(casted_kwargs.keys()):
-            raise ValueError(f"Required arguments `{", ".join(diff)}` were not passed")
+            raise ValueError(f"Required arguments `{', '.join(diff)}` were not passed")
 
         # # args count test
         # sign_len = len(sign.parameters)

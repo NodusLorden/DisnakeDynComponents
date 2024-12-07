@@ -3,3 +3,7 @@
 .idea
 __pycache__
 setup.py
+setup.cfg
+build
+disnake_dyn_components.egg-info
+dist
