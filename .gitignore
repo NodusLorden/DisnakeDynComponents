@@ -1,0 +1,5 @@
+.env
+.mypy_cache
+.idea
+__pycache__
+setup.py
