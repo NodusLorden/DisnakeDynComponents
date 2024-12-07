@@ -34,6 +34,8 @@ async def say_hello_buttons(inter: disnake.AppCmdInter):
         "Click for say hello",
         components=[hello_button()]
     )
+
+bot.run(os.getenv("TOKEN"))
 ```
 
 ## Work protocol
