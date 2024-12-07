@@ -1,4 +1,4 @@
-# Disnake dynemic components
+# Disnake dynamic components
 
 Library for simplified creation of buttons for Discord bots created using disnake.
 
