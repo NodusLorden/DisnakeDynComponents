@@ -14,6 +14,7 @@ import disnake
 from disnake.ext import commands
 from disnake_dyn_components import DynButtons
 import dotenv
+import os
 
 
 dotenv.load_dotenv()
