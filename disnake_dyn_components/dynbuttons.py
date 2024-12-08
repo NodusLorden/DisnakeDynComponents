@@ -1,4 +1,4 @@
-from disnake.ext import commands
+from disnake.ext.commands.common_bot_base import CommonBotBase
 from disnake import ButtonStyle, Emoji, PartialEmoji
 from disnake.interactions.message import MessageInteraction
 from disnake.ui import Button
@@ -21,7 +21,7 @@ P = ParamSpec("P")
 
 class DynButtons:
 
-    def __init__(self, bot: commands.BotBase):
+    def __init__(self, bot: CommonBotBase):
         self.__bot = bot
         self.__buttons_ident_list: list[str] = []  # ident list for find collisions
 
