@@ -1,4 +1,4 @@
-# Disnake dynemic components
+# Disnake dynamic components
 
 Library for simplified creation of buttons for Discord bots created using disnake.
 
@@ -14,6 +14,7 @@ import disnake
 from disnake.ext import commands
 from disnake_dyn_components import DynButtons
 import dotenv
+import os
 
 
 dotenv.load_dotenv()
@@ -34,6 +35,8 @@ async def say_hello_buttons(inter: disnake.AppCmdInter):
         "Click for say hello",
         components=[hello_button()]
     )
+
+bot.run(os.getenv("TOKEN"))
 ```
 
 ## Work protocol
