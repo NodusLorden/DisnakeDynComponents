@@ -198,3 +198,12 @@ bot.run(os.getenv("TOKEN"))
 ```
 
 More [examples](https://github.com/NodusLorden/DisnakeDynComponents/tree/master/examples) here.
+
+## Security
+
+You can safely transmit some important, but not confidential data,
+since the `custom_id` of the components is transmitted to the clients of users.
+Discord on its side checks the validity of the components, including checking the matches of `custom_id`,
+because of which you can safely transmit the role id through the buttons for subsequent issuance by the bot,
+since when simulating pressing a non-existent button with a template `custom_id` with a replaced role,
+Discord will block such a request and it will not reach the bot client.
