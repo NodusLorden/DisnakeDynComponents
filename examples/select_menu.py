@@ -15,7 +15,7 @@ log = logging.getLogger(__name__)
 
 dotenv.load_dotenv()
 
-bot = commands.Bot(intents=disnake.Intents.default(), test_guilds=[832270428093284352])
+bot = commands.Bot(intents=disnake.Intents.default())
 
 
 # Create a components store to search for collisions between them
