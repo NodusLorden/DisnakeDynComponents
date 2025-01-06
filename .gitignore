@@ -8,3 +8,4 @@ build
 disnake_dyn_components.egg-info
 dist
 test.py
+.gitignore
