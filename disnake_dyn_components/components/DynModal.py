@@ -1,9 +1,4 @@
 from disnake.ui import Modal, TextInput
-from disnake import ButtonStyle, Emoji, PartialEmoji
-from typing import Optional, Union, Self
-from disnake import utils
-
-
 
 
 class DynModal(Modal):

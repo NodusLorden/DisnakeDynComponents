@@ -1,13 +1,12 @@
 import disnake
 from disnake.ext import commands
+from disnake.ext.commands import Param
 import logging
 import os
 import dotenv
-import datetime
 
-from disnake.ext.commands import Param
 
-from disnake_dyn_components import DynComponents, DynTextInput, DynMenu
+from disnake_dyn_components import DynComponents, DynMenu
 
 
 logging.basicConfig(level=logging.WARN)
