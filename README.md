@@ -12,16 +12,15 @@ Library for simplified creation of buttons for Discord bots created using disnak
 ```py
 import disnake
 from disnake.ext import commands
-from disnake_dyn_components import DynButtons
+from disnake_dyn_components import DynComponents
 import dotenv
 import os
-
 
 dotenv.load_dotenv()
 
 bot = commands.Bot(intents=disnake.Intents.default())
 
-buttons = DynButtons(bot)
+buttons = DynComponents(bot)
 
 
 @buttons.create_button("say_hello", label="Hello")
@@ -35,6 +34,7 @@ async def say_hello_buttons(inter: disnake.AppCmdInter):
         "Click for say hello",
         components=[hello_button()]
     )
+
 
 bot.run(os.getenv("TOKEN"))
 ```
@@ -107,8 +107,7 @@ import os
 import dotenv
 import io
 
-from disnake_dyn_components import DynButtons
-
+from disnake_dyn_components import DynComponents
 
 logging.basicConfig(level=logging.WARN)
 log = logging.getLogger(__name__)
@@ -117,8 +116,7 @@ dotenv.load_dotenv()
 
 bot = commands.Bot(intents=disnake.Intents.default())
 
-
-buttons = DynButtons(bot)
+buttons = DynComponents(bot)
 
 files: list[io.BytesIO] = []
 

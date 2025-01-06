@@ -4,7 +4,7 @@ import logging
 import os
 import dotenv
 
-from disnake_dyn_components import DynButtons
+from disnake_dyn_components import DynComponents
 
 
 logging.basicConfig(level=logging.WARN)
@@ -15,7 +15,7 @@ dotenv.load_dotenv()
 bot = commands.Bot(intents=disnake.Intents.default())
 
 
-buttons = DynButtons(bot)
+components = DynComponents(bot)
 
 
 # """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
@@ -41,7 +41,7 @@ def message_button_collector(ident: str, button_data: list[str], sep=":") -> str
     return sep.join([ident] + button_data)
 
 
-@buttons.create_button(
+@components.create_button(
     "hello",
     label="Send",
     style=disnake.ButtonStyle.green,

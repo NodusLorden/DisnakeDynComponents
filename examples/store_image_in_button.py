@@ -6,7 +6,7 @@ import dotenv
 import io
 from PIL import Image
 
-from disnake_dyn_components import DynButtons, Convertor
+from disnake_dyn_components import DynComponents, Convertor
 
 
 logging.basicConfig(level=logging.WARN)
@@ -59,12 +59,12 @@ class PILImage(Convertor):
         return string
 
 
-# Create a button store to search for collisions between them
-buttons = DynButtons(bot)
+# Create a components store to search for collisions between them
+components = DynComponents(bot)
 
 
 # Create a button model
-@buttons.create_button("send_image", label="Send", style=disnake.ButtonStyle.blurple)
+@components.create_button("send_image", label="Send", style=disnake.ButtonStyle.blurple)
 async def image_button(inter: disnake.MessageInteraction, image: PILImage):
     image_buff = io.BytesIO()
     image.save(fp=image_buff, format="png")
