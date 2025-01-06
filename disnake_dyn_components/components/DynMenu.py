@@ -1,8 +1,7 @@
 import disnake
+from disnake.abc import Messageable
 from disnake import User, Role, Member, ChannelType
 from typing import Optional, Union, Sequence
-
-from disnake.abc import Messageable
 
 
 class _DynMenu:

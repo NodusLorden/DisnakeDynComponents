@@ -1,10 +1,9 @@
 import disnake.ui
-from discord.ui.select import BaseSelect
 from disnake.ext.commands.common_bot_base import CommonBotBase
 from disnake import ButtonStyle, Emoji, PartialEmoji
 from disnake.interactions.message import MessageInteraction
 from disnake.interactions.modal import ModalInteraction
-from disnake.ui import Button, TextInput, StringSelect, UserSelect, RoleSelect, MentionableSelect, ChannelSelect
+from disnake.ui import StringSelect, UserSelect, RoleSelect, MentionableSelect, ChannelSelect, BaseSelect
 from typing import Optional, Union, Callable, Concatenate, ParamSpec, Any
 import logging
 import inspect
@@ -13,11 +12,11 @@ from inspect import Signature, Parameter
 from .components.DynButton import DynButton
 from .components.DynModal import DynModal
 from .components.DynModal import DynTextInput
-from .components.DynMenu import _DynMenu
+from .components.DynMenu import DynMenu
 from .abc_convertor import Convertor
 
 
-__all__ = ["DynComponents", "DynTextInput", "_DynMenu"]
+__all__ = ["DynComponents"]
 
 
 log = logging.getLogger(__name__)
@@ -333,7 +332,7 @@ class DynComponents:
     def create_select_menu(
             self,
             ident: str,
-            menu: _DynMenu,
+            menu: DynMenu,
             collector: Callable[[str, list[str]], str] = base_collector,
             separator: Callable[[str], list[str]] = base_separator
     ) -> Callable[[Callable[Concatenate[MessageInteraction, P], Any]], Callable[P, BaseSelect]]:
