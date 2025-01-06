@@ -3,28 +3,27 @@
 Library for simplified creation of buttons for Discord bots created using disnake.
 
 - [x] Button support
-- [ ] Modal support
-- [ ] Select menu support
+- [x] Modal support
+- [x] Select menu support
 
 
 ## Fast start
 
-```py
+```python
 import disnake
 from disnake.ext import commands
-from disnake_dyn_components import DynButtons
+from disnake_dyn_components import DynComponents
 import dotenv
 import os
-
 
 dotenv.load_dotenv()
 
 bot = commands.Bot(intents=disnake.Intents.default())
 
-buttons = DynButtons(bot)
+components = DynComponents(bot)
 
 
-@buttons.create_button("say_hello", label="Hello")
+@components.create_button("say_hello", label="Hello")
 async def hello_button(inter: disnake.MessageInteraction):
     await inter.send("Hello")
 
@@ -35,6 +34,7 @@ async def say_hello_buttons(inter: disnake.AppCmdInter):
         "Click for say hello",
         components=[hello_button()]
     )
+
 
 bot.run(os.getenv("TOKEN"))
 ```
@@ -56,7 +56,7 @@ It is recommended to create all buttons at the beginning, rather than at runtime
 
 Basically, ident and data are placed in a string with a `:` separator. If you need to change the transfer protocol, you can do this by passing functions for collecting and separating.
 
-```py
+```python
 def button_data_collector(ident: str, button_data: list[str], sep="#") -> str:
     if sep in ident:
         raise ValueError(
@@ -77,7 +77,7 @@ def button_data_separator(custom_id: str, sep="#") -> list[str]:
     return custom_id.split(sep)[1:]
 
 
-@buttons.create_button(
+@components.create_button(
     "hello",
     label="Send",
     separator=button_data_separator,
@@ -96,29 +96,24 @@ Additionally, support for types is implemented:
 - `bool` convert to int, this values `0` and `1`
 Types without annotations will implicitly try to convert to `string` and when returned, they will remain as that type.
 
-## Example
-### Pagination
+# Examples
+## Button Pagination this shared file
 
-```py
+```python
 import disnake
 from disnake.ext import commands
-import logging
 import os
 import dotenv
 import io
 
-from disnake_dyn_components import DynButtons
+from disnake_dyn_components import DynComponents
 
-
-logging.basicConfig(level=logging.WARN)
-log = logging.getLogger(__name__)
 
 dotenv.load_dotenv()
 
-bot = commands.Bot(intents=disnake.Intents.default())
+bot = commands.InteractionBot(intents=disnake.Intents.default())
 
-
-buttons = DynButtons(bot)
+components = DynComponents(bot)
 
 files: list[io.BytesIO] = []
 
@@ -138,21 +133,16 @@ def get_button_and_text(file_index: int, page_index: int) -> tuple[disnake.ui.Bu
     file_buff.seek(1000 * page_index)
     text = file_buff.read(1000).decode("utf-8")
 
-    prev_button = get_previous_button(file_index, page_index - 1)
-    # Disable button in first page
-    if page_index == 0:
-        prev_button.disabled = True
-
-    next_button = get_next_button(file_index, page_index + 1)
-    # Disable if this is the only page.
-    if not file_buff.read(1):
-        next_button.disabled = True
     file_buff.seek(1000 * page_index)
 
-    return prev_button, next_button, text
+    return (
+        get_previous_button(file_index, page_index - 1).update(disabled=page_index == 0),
+        get_next_button(file_index, page_index + 1).update(disabled=not file_buff.read(1)),
+        text
+    )
 
 
-@buttons.create_button("next", label=">")
+@components.create_button("next", label=">")
 async def get_next_button(inter: disnake.MessageInteraction, file_index: int, page_index: int):
     await inter.response.defer(with_message=False)
     prev_button, next_button, text = get_button_and_text(file_index, page_index)
@@ -162,7 +152,7 @@ async def get_next_button(inter: disnake.MessageInteraction, file_index: int, pa
     )
 
 
-@buttons.create_button("previous", label="<")
+@components.create_button("previous", label="<")
 async def get_previous_button(inter: disnake.MessageInteraction, file_index: int, page_index: int):
     await inter.response.defer(with_message=False)
     prev_button, next_button, text = get_button_and_text(file_index, page_index)
@@ -197,13 +187,181 @@ async def send_file(
 bot.run(os.getenv("TOKEN"))
 ```
 
-More [examples](https://github.com/NodusLorden/DisnakeDynComponents/tree/master/examples) here.
+![img.png](images/button_send_file_img.png)
+
+![img.png](images/button_page_1_img.png)
+
+![img_1.png](images/button_page_2_img.png)
+
+## Moder Profile this Modal
+
+```python
+import disnake
+from disnake.ext import commands
+import os
+import dotenv
+import datetime
+
+from disnake_dyn_components import DynComponents, DynTextInput
+
+
+dotenv.load_dotenv()
+
+bot = commands.Bot(intents=disnake.Intents.default())
+
+
+# Create a components store to search for collisions between them
+components = DynComponents(bot)
+
+
+# Modals models
+@components.create_modal(
+    "mute_user",
+    "Mute user",
+    {
+        "duration": DynTextInput("Duration (minutes)"),
+        "reason": DynTextInput("Reason", style=disnake.TextInputStyle.long)
+    }
+)
+async def mute_user_modal(inter: disnake.ModalInteraction, text_values, user_id: int):
+    text_duration = text_values["duration"]
+    try:
+        duration = float(text_duration)
+    except ValueError:
+        return await inter.send("Duration must be number")
+
+    member = inter.guild.get_member(user_id) or await inter.guild.fetch_member(user_id)
+    await member.timeout(duration=duration * 60, reason=text_values["reason"])
+
+    await inter.send(
+        f"Member <@{user_id}> was muted",
+        allowed_mentions=disnake.AllowedMentions.none()
+    )
+
+
+@components.create_modal(
+    "rename_user",
+    "Rename",
+    {
+        "name": DynTextInput("New Name"),
+        "reason": DynTextInput("Reason", style=disnake.TextInputStyle.long)
+    }
+)
+async def rename_user_modal(inter: disnake.ModalInteraction, text_values, user_id: int):
+    new_name = text_values["name"]
+
+    member = inter.guild.get_member(user_id) or await inter.guild.fetch_member(user_id)
+    await member.edit(nick=new_name, reason=text_values["reason"])
+
+    await inter.send(
+        f"Member <@{user_id}> was renamed",
+        allowed_mentions=disnake.AllowedMentions.none()
+    )
+
+
+# Buttons models
+@components.create_button("mute_user", label="Mute", style=disnake.ButtonStyle.primary)
+async def mute_user_button(inter: disnake.MessageInteraction, user_id: int):
+    if inter.message.interaction_metadata.user.id != inter.author.id:
+        return await inter.response.send_message("Unavailable")
+    await inter.response.send_modal(mute_user_modal(user_id))
+
+
+@components.create_button("rename_user", label="Rename", style=disnake.ButtonStyle.green)
+async def rename_user_button(inter: disnake.MessageInteraction, user_id: int):
+    if inter.message.interaction_metadata.user.id != inter.author.id:
+        return await inter.response.send_message("Unavailable")
+    await inter.response.send_modal(rename_user_modal(user_id))
+
+
+@bot.slash_command()
+@commands.has_permissions(moderate_members=True)
+async def mod_profile(inter: disnake.AppCmdInter, member: disnake.Member):
+    embed = (disnake.Embed(title="Example Member profile", timestamp=datetime.datetime.now(datetime.UTC))
+             .set_thumbnail(member.display_avatar.url)
+             .set_author(name=bot.user.display_name, icon_url=bot.user.display_avatar.url)
+             .set_footer(text=f"Status: {member.status}\nActivity: {member.activity}\n"))
+
+    await inter.send(
+        embed=embed,
+        components=[
+            # We create buttons by passing the parameters specified in the model
+            rename_user_button(member.id),
+            mute_user_button(member.id)
+        ]
+    )
+
+
+bot.run(os.getenv("TOKEN"))
+```
+
+![img.png](images/mod_profile_img.png)
+
+![img.png](images/rename_modal_img.png)
+
+![img.png](images/mute_modal_img.png)
+
+![img.png](images/mute_img.png)
+
+## Select Menu
+
+```python
+import disnake
+from disnake.ext import commands
+import logging
+import os
+import dotenv
+import datetime
+from disnake.ext.commands import Param
+
+from disnake_dyn_components import DynComponents, DynTextInput, DynMenu
+
+
+dotenv.load_dotenv()
+
+bot = commands.Bot(intents=disnake.Intents.default())
+
+
+# Create a components store to search for collisions between them
+components = DynComponents(bot)
+
+
+@components.create_select_menu(
+    "send_message",
+    DynMenu.user_select(placeholder="Choose User for send message"),
+    separator=lambda x: x.split(":", 1)[1:]  # for ignore : in user messages
+)
+async def select_member_menu(inter: disnake.MessageInteraction, values, msg: str):
+    await inter.response.defer(with_message=False)
+    await inter.send(f"Message for {values[0].mention}: {msg}")
+
+
+@bot.slash_command()
+@commands.guild_only()
+async def select_member(inter: disnake.AppCmdInter, msg: str = Param(max_length=50)):
+    await inter.response.send_message(
+        "Select member",
+        components=[
+            select_member_menu(msg)
+        ]
+    )
+
+
+bot.run(os.getenv("TOKEN"))
+```
+
+![img.png](images/select_menu_message_img.png)
+
+![img.png](images/choose_message_img.png)
+
+![img.png](images/select_result_img.png)
+
+### More [examples](https://github.com/NodusLorden/DisnakeDynComponents/tree/master/examples) here.
 
 ## Security
 
-You can safely transmit some important, but not confidential data,
-since the `custom_id` of the components is transmitted to the clients of users.
-Discord on its side checks the validity of the components, including checking the matches of `custom_id`,
-because of which you can safely transmit the role id through the buttons for subsequent issuance by the bot,
+Transferring important but not confidential data via `custom_id` components is safe. 
+Discord, for its part, checks the validity of components, including checking for `custom_id` matches,
+which is why you can safely transfer role ids via buttons for subsequent issuance by the bot,
 since when simulating pressing a non-existent button with a template `custom_id` with a replaced role,
 Discord will block such a request and it will not reach the bot client.

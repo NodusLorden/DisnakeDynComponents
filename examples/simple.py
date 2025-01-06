@@ -4,7 +4,7 @@ import logging
 import os
 import dotenv
 
-from disnake_dyn_components import DynButtons
+from disnake_dyn_components import DynComponents
 
 
 logging.basicConfig(level=logging.WARN)
@@ -15,12 +15,12 @@ dotenv.load_dotenv()
 bot = commands.Bot(intents=disnake.Intents.default())
 
 
-# Create a button store to search for collisions between them
-buttons = DynButtons(bot)
+# Create a components store to search for collisions between them
+components = DynComponents(bot)
 
 
 # Create a button model
-@buttons.create_button("hello", label="Send", style=disnake.ButtonStyle.blurple)
+@components.create_button("hello", label="Send", style=disnake.ButtonStyle.blurple)
 async def hello_button(inter: disnake.MessageInteraction, user_id: int):
     await inter.send(
         f"User {inter.author.mention} say hello <@{user_id}>",

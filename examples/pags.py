@@ -5,7 +5,7 @@ import os
 import dotenv
 import io
 
-from disnake_dyn_components import DynButtons
+from disnake_dyn_components import DynComponents
 
 
 logging.basicConfig(level=logging.WARN)
@@ -13,10 +13,10 @@ log = logging.getLogger(__name__)
 
 dotenv.load_dotenv()
 
-bot = commands.Bot(intents=disnake.Intents.default())
+bot = commands.InteractionBot(intents=disnake.Intents.default())
 
 
-buttons = DynButtons(bot)
+components = DynComponents(bot)
 
 files: list[io.BytesIO] = []
 
@@ -36,21 +36,16 @@ def get_button_and_text(file_index: int, page_index: int) -> tuple[disnake.ui.Bu
     file_buff.seek(1000 * page_index)
     text = file_buff.read(1000).decode("utf-8")
 
-    prev_button = get_previous_button(file_index, page_index - 1)
-    # Disable button in first page
-    if page_index == 0:
-        prev_button.disabled = True
-
-    next_button = get_next_button(file_index, page_index + 1)
-    # Disable if this is the only page.
-    if not file_buff.read(1):
-        next_button.disabled = True
     file_buff.seek(1000 * page_index)
 
-    return prev_button, next_button, text
+    return (
+        get_previous_button(file_index, page_index - 1).update(disabled=page_index == 0),
+        get_next_button(file_index, page_index + 1).update(disabled=not file_buff.read(1)),
+        text
+    )
 
 
-@buttons.create_button("next", label=">")
+@components.create_button("next", label=">")
 async def get_next_button(inter: disnake.MessageInteraction, file_index: int, page_index: int):
     await inter.response.defer(with_message=False)
     prev_button, next_button, text = get_button_and_text(file_index, page_index)
@@ -60,7 +55,7 @@ async def get_next_button(inter: disnake.MessageInteraction, file_index: int, pa
     )
 
 
-@buttons.create_button("previous", label="<")
+@components.create_button("previous", label="<")
 async def get_previous_button(inter: disnake.MessageInteraction, file_index: int, page_index: int):
     await inter.response.defer(with_message=False)
     prev_button, next_button, text = get_button_and_text(file_index, page_index)
