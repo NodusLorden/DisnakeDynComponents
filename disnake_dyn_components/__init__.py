@@ -4,4 +4,4 @@ from .components import DynTextInput, DynModal, DynMenu
 
 __all__ = ["DynComponents", "Convertor", "DynTextInput", "DynMenu"]
 __author__ = "Lord_Nodus"
-__version__ = "0.2.0"
+__version__ = "0.2.1"
