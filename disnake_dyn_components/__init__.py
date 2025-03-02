@@ -1,5 +1,5 @@
 from .dyncomponents import DynComponents
-from .abc_convertor import Convertor
+from .convertor import Convertor
 from .components import DynTextInput, DynModal, DynMenu
 
 __all__ = ["DynComponents", "Convertor", "DynTextInput", "DynMenu"]

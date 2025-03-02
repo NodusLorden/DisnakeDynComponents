@@ -13,7 +13,7 @@ from .components.DynButton import DynButton
 from .components.DynModal import DynModal
 from .components.DynModal import DynTextInput
 from .components.DynMenu import DynMenu
-from .abc_convertor import Convertor
+from .convertor import Convertor
 
 
 __all__ = ["DynComponents"]
@@ -145,7 +145,7 @@ class DynComponents:
             val = casted_kwargs[param_name]
             annotation_type = param.annotation
             if annotation_type is int:
-                button_data.append(hex(val)[2:])
+                button_data.append(f"{val:x}")
             elif annotation_type is bool:
                 button_data.append(str(int(val)))
             elif annotation_type is Signature.empty:
@@ -236,7 +236,7 @@ class DynComponents:
                 if not custom_id.startswith(ident):
                     raise ValueError("Collector must return a custom_id starting with the identifier")
                 if len(custom_id) > 100:
-                    raise ValueError(f"Custom_id is longer than 100, {custom_id=}")
+                    raise ValueError(f"Custom_id is longer than 100 characters {custom_id=}")
                 button.custom_id = custom_id
                 return button
 
