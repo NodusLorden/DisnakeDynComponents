@@ -1,18 +1,16 @@
-from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Protocol, runtime_checkable
 
 
 __all__ = ["Convertor"]
 
 
-class Convertor(ABC):
+@runtime_checkable
+class Convertor(Protocol):
 
     @staticmethod
-    @abstractmethod
     def to_string(value: Any) -> str:
         ...
 
     @staticmethod
-    @abstractmethod
     def from_string(string: str) -> Any:
         ...
