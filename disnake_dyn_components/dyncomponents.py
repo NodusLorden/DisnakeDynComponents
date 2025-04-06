@@ -4,7 +4,7 @@ from disnake import ButtonStyle, Emoji, PartialEmoji
 from disnake.interactions.message import MessageInteraction
 from disnake.interactions.modal import ModalInteraction
 from disnake.ui import StringSelect, UserSelect, RoleSelect, MentionableSelect, ChannelSelect, BaseSelect
-from typing import Optional, Union, Callable, Concatenate, ParamSpec, Any
+from typing import Optional, Union, Callable, Concatenate, ParamSpec, Any, Self
 import logging
 import inspect
 from inspect import Signature, Parameter
@@ -27,11 +27,15 @@ P = ParamSpec("P")
 
 class DynComponents:
 
-    def __init__(self, bot: CommonBotBase):
+    def __init__(self, bot: CommonBotBase | None = None):
         self.__bot = bot
         self.__buttons_ident_list: list[str] = []  # button ident list for find collisions
         self.__modal_ident_list: list[str] = []  # modal ident list for find collisions
         self.__select_menu_ident_list: list[str] = []  # select menu ident list for find collisions
+
+        self.__buttons_list: list[str] = []
+        self.__modal_list: list[str] = []
+        self.__select_menu_list: list[str] = []
 
     def _add_button_ident(self, ident: str):
         self.__buttons_ident_list.append(ident)
@@ -77,6 +81,33 @@ class DynComponents:
             if register_ident.startswith(ident) or ident.startswith(register_ident):
                 return register_ident
         return None
+
+    def merge(self, other: Self):
+        if other.__bot is not None:
+            raise ValueError("You can only attach a component without a bot")
+        for button_ident in other.__buttons_ident_list:
+            if (ident := self._get_button_ident_collision(button_ident)) is not None:
+                raise ValueError(f"Cannot merge because there is an collision {ident=}")
+
+        for modal_ident in other.__modal_ident_list:
+            if (ident := self._get_modal_ident_collision(modal_ident)) is not None:
+                raise ValueError(f"Cannot merge because there is an collision {ident=}")
+
+        for select_menu_ident in other.__select_menu_ident_list:
+            if (ident := self._get_select_menu_ident_collision(select_menu_ident)) is not None:
+                raise ValueError(f"Cannot merge because there is an collision {ident=}")
+
+        if "on_button_click" not in self.__bot.extra_events:
+            self.__bot.extra_events["on_button_click"] = []
+        self.__bot.extra_events["on_button_click"] += other.__buttons_list
+
+        if "on_modal_submit" not in self.__bot.extra_events:
+            self.__bot.extra_events["on_modal_submit"] = []
+        self.__bot.extra_events["on_modal_submit"] += other.__modal_list
+
+        if "on_dropdown" not in self.__bot.extra_events:
+            self.__bot.extra_events["on_dropdown"] = []
+        self.__bot.extra_events["on_dropdown"] += other.__select_menu_list
 
     @staticmethod
     def _args_type_checker(sign: Signature, casted_kwargs):
@@ -240,6 +271,10 @@ class DynComponents:
                 button.custom_id = custom_id
                 return button
 
+            if self.__bot is None:
+                self.__buttons_list.append(check_dyn_button)
+                return wrapper
+
             if "on_button_click" not in self.__bot.extra_events:
                 self.__bot.extra_events["on_button_click"] = []
             self.__bot.extra_events["on_button_click"].append(check_dyn_button)
@@ -319,6 +354,10 @@ class DynComponents:
                     raise ValueError(f"Custom_id is longer than 100, {custom_id=}")
                 modal.custom_id = custom_id
                 return modal
+
+            if self.__bot is None:
+                self.__modal_list.append(check_dyn_modal)
+                return wrapper
 
             if "on_modal_submit" not in self.__bot.extra_events:
                 self.__bot.extra_events["on_modal_submit"] = []
@@ -431,6 +470,10 @@ class DynComponents:
                     raise ValueError(f"Custom_id is longer than 100, {custom_id=}")
                 select_menu.custom_id = custom_id
                 return select_menu
+
+            if self.__bot is None:
+                self.__select_menu_list.append(check_dyn_select_menu)
+                return wrapper
 
             if "on_dropdown" not in self.__bot.extra_events:
                 self.__bot.extra_events["on_dropdown"] = []
