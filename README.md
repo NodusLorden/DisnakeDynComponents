@@ -9,7 +9,7 @@ Library for simplified creation of buttons for Discord bots created using disnak
 
 ## Fast start
 
-`pip install disnake-dyn-components`
+```pip install disnake-dyn-components```
 
 ```python
 import disnake
