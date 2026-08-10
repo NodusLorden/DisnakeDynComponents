@@ -91,7 +91,7 @@ async def message_button(inter: disnake.MessageInteraction, msg: str = ":)"):
 
 ### Data
 
-When you specify a parameter annotation, it is used to convert data from a string. You can create your own class that will handle type conversion from value to string and back. To make things easier, there is an abstract class `Convertor`.
+When you specify a parameter annotation, it is used to convert data from a string. You can create your own class that will handle type conversion from value to string and back. To make things easier, there is an protocol `Convertor`.
 
 Additionally, support for types is implemented:
 - `int` convert to hex to save space
@@ -358,7 +358,7 @@ bot.run(os.getenv("TOKEN"))
 
 ![img.png](images/select_result_img.png)
 
-### More [examples](https://github.com/NodusLorden/DisnakeDynComponents/tree/master/examples) here.
+### More [examples here](https://github.com/NodusLorden/DisnakeDynComponents/tree/master/examples).
 
 ## Security
 
