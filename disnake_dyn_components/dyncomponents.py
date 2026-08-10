@@ -1,3 +1,5 @@
+from types import FunctionType
+
 import disnake.ui
 from disnake.ext.commands.common_bot_base import CommonBotBase
 from disnake import ButtonStyle, Emoji, PartialEmoji
@@ -22,7 +24,14 @@ __all__ = ["DynComponents"]
 log = logging.getLogger(__name__)
 
 
-P = ParamSpec("P")
+def is_unbound_method(func):
+    if not isinstance(func, FunctionType):
+        return False
+    qualname = func.__qualname__
+    if '.' not in qualname:
+        return False
+    _, meth_name = qualname.rsplit('.', 1)
+    return func, meth_name == func.__name__ and hasattr(func, '__self__') is False
 
 
 class DynComponents:
@@ -210,7 +219,7 @@ class DynComponents:
 
         return casted_kwargs
 
-    def create_button(
+    def create_button[**P, T](
             self,
             ident: str,
             *,
@@ -221,7 +230,10 @@ class DynComponents:
             row: Optional[int] = None,
             collector: Callable[[str, list[str]], str] = base_collector,
             separator: Callable[[str], list[str]] = base_separator
-    ) -> Callable[[Callable[Concatenate[MessageInteraction, P], Any]], Callable[P, DynButton]]:
+    ) -> Callable[[
+            Callable[Concatenate[MessageInteraction, P], T] |
+            Callable[Concatenate[Any, MessageInteraction, P], Any]
+    ], Callable[P, DynButton]]:
         collision = self._get_button_ident_collision(ident)
         if collision is not None:
             raise ValueError(f"Ident of button `{ident}` has collision this `{collision}`")
@@ -230,22 +242,42 @@ class DynComponents:
             raise ValueError("Dyn buttons do not support url or link style")
 
         def builder(
-                func: Callable[Concatenate[MessageInteraction, P], Any]
+                func: Callable[Concatenate[MessageInteraction, P], T] |
+                      Callable[Concatenate[Any, MessageInteraction, P], Any]
         ) -> Callable[P, DynButton]:
 
             _original_sign = inspect.signature(func)
+            unbound_method = False
+            self_arg = None
 
-            if not _original_sign.parameters:
-                raise TypeError(
-                    f"Invalid function structure, argument {MessageInteraction} is required in first position")
+            if inspect.isfunction(func):
+                if is_unbound_method(func):
+                    unbound_method = True
+                    if len(_original_sign.parameters) < 2:
+                        raise TypeError(
+                            f"Invalid function structure, argument {MessageInteraction} is required in first position")
 
-            _first_param, *_other_params = _original_sign.parameters.values()
-            if _first_param.annotation not in (MessageInteraction, Signature.empty):
-                raise TypeError(
-                    f"Invalid first argument annotation,"
-                    f" it should not be there or its type should be {MessageInteraction}")
+                    _self, _first_param, *_other_params = _original_sign.parameters.values()
+                    if _first_param.annotation not in (MessageInteraction, Signature.empty):
+                        raise TypeError(
+                            f"Invalid first argument annotation,"
+                            f" it should not be there or its type should be {MessageInteraction}")
 
-            sign = _original_sign.replace(parameters=_other_params)
+                    sign = _original_sign.replace(parameters=_other_params)
+                else:
+                    if not _original_sign.parameters:
+                        raise TypeError(
+                            f"Invalid function structure, argument {MessageInteraction} is required in first position")
+
+                    _first_param, *_other_params = _original_sign.parameters.values()
+                    if _first_param.annotation not in (MessageInteraction, Signature.empty):
+                        raise TypeError(
+                            f"Invalid first argument annotation,"
+                            f" it should not be there or its type should be {MessageInteraction}")
+
+                    sign = _original_sign.replace(parameters=_other_params)
+            else:
+                raise TypeError(f"Decorator must receive a function, but receives {type(func)}")
 
             async def check_dyn_button(inter: MessageInteraction):
                 custom_id: str = inter.component.custom_id  # type: ignore
@@ -253,10 +285,16 @@ class DynComponents:
                     return
                 custom_id_data = separator(custom_id)
                 casted_kwargs = self._convert_kwargs_from_strings(sign, custom_id_data)
-                await func(inter, **casted_kwargs)  # type: ignore
+                if unbound_method:
+                    await func(self_arg, inter, **casted_kwargs)
+                else:
+                    await func(inter, **casted_kwargs)  # type: ignore
 
             def wrapper(*args: P.args, **kwargs: P.kwargs) -> DynButton:
+                nonlocal self_arg
                 # args to kwargs
+                if unbound_method:
+                    self_arg, *args = args
                 casted_kwargs = dict(zip(sign.parameters.keys(), args))
                 casted_kwargs.update(kwargs)
                 self._args_type_checker(sign, casted_kwargs)
@@ -284,14 +322,17 @@ class DynComponents:
         self._add_button_ident(ident)
         return builder
 
-    def create_modal(
+    def create_modal[**P, T](
             self,
             ident: str,
             title: str,
             text_inputs: dict[str, DynTextInput],
             collector: Callable[[str, list[str]], str] = base_collector,
             separator: Callable[[str], list[str]] = base_separator
-    ) -> Callable[[Callable[Concatenate[ModalInteraction, P], Any]], Callable[P, DynModal]]:
+    ) -> Callable[[
+            Callable[Concatenate[ModalInteraction, P], Any] |
+            Callable[Concatenate[Any, ModalInteraction, P], Any]
+    ], Callable[P, DynModal]]:
         collision = self._get_modal_ident_collision(ident)
         if collision is not None:
             raise ValueError(f"Ident of modal `{ident}` has collision this `{collision}`")
@@ -302,27 +343,53 @@ class DynComponents:
         if len(text_inputs) == 0:
             raise ValueError(f"Modal must have at least 1 text_input")
 
+        modal = DynModal(title=title)
+
         def builder(
-                func: Callable[Concatenate[ModalInteraction, P], Any]
+                func: Callable[Concatenate[ModalInteraction, P], Any] |
+                      Callable[Concatenate[Any, ModalInteraction, P], Any]
         ) -> Callable[P, DynModal]:
 
             _original_sign = inspect.signature(func)
+            unbound_method = False
+            self_arg = None
 
-            if len(_original_sign.parameters) < 2:
-                raise TypeError(
-                    f"Invalid function structure, argument {ModalInteraction} is required in first position, "
-                    f"and {dict[str, str]} in second position")
+            if inspect.isfunction(func):
+                if is_unbound_method(func):
+                    unbound_method = True
+                    if len(_original_sign.parameters) < 3:
+                        raise TypeError(
+                            f"Invalid function structure, argument {ModalInteraction} is required in first position,"
+                            f" and {dict[str, str]} in second position")
 
-            _first_param, _second_param, *_other_params = _original_sign.parameters.values()
-            if _first_param.annotation not in (ModalInteraction, Signature.empty):
-                raise TypeError(
-                    f"Invalid first argument annotation,"
-                    f" it should not be there or its type should be {ModalInteraction}")
+                    _self, _first_param, _second_param, *_other_params = _original_sign.parameters.values()
+                    if _first_param.annotation not in (ModalInteraction, Signature.empty):
+                        raise TypeError(
+                            f"Invalid first argument annotation,"
+                            f" it should not be there or its type should be {ModalInteraction}")
 
-            if _second_param.annotation not in (dict[str, str], Signature.empty):
-                raise TypeError(
-                    f"Invalid first argument annotation,"
-                    f" it should not be there or its type should be {dict[str, str]}")
+                    if _second_param.annotation not in (dict[str, str], Signature.empty):
+                        raise TypeError(
+                            f"Invalid second argument annotation,"
+                            f" it should not be there or its type should be {dict[str, str]}")
+                else:
+                    if len(_original_sign.parameters) < 2:
+                        raise TypeError(
+                            f"Invalid function structure, argument {ModalInteraction} is required in first position,"
+                            f" and {dict[str, str]} in second position")
+
+                    _first_param, _second_param, *_other_params = _original_sign.parameters.values()
+                    if _first_param.annotation not in (ModalInteraction, Signature.empty):
+                        raise TypeError(
+                            f"Invalid first argument annotation,"
+                            f" it should not be there or its type should be {ModalInteraction}")
+
+                    if _second_param.annotation not in (dict[str, str], Signature.empty):
+                        raise TypeError(
+                            f"Invalid second argument annotation,"
+                            f" it should not be there or its type should be {dict[str, str]}")
+            else:
+                raise TypeError(f"Decorator must receive a function, but receives {type(func)}")
 
             sign = _original_sign.replace(parameters=_other_params)
 
@@ -332,15 +399,20 @@ class DynComponents:
                     return
                 custom_id_data = separator(custom_id)
                 casted_kwargs = self._convert_kwargs_from_strings(sign, custom_id_data)
-                await func(inter, inter.text_values, **casted_kwargs)  # type: ignore
+
+                if unbound_method:
+                    await func(self_arg, inter, inter.text_values, **casted_kwargs)  # type: ignore
+                else:
+                    await func(inter, inter.text_values, **casted_kwargs)  # type: ignore
 
             def wrapper(*args: P.args, **kwargs: P.kwargs) -> DynModal:
+                nonlocal self_arg
                 # args to kwargs
+                if unbound_method:
+                    self_arg, *args = args
                 casted_kwargs = dict(zip(sign.parameters.keys(), args))
                 casted_kwargs.update(kwargs)
                 self._args_type_checker(sign, casted_kwargs)
-
-                modal = DynModal(title=title)
 
                 for name, text_input in text_inputs.items():
                     text_input.custom_id = name
@@ -368,38 +440,65 @@ class DynComponents:
         self._add_modal_ident(ident)
         return builder
 
-    def create_select_menu(
+    def create_select_menu[**P, T](
             self,
             ident: str,
             menu: DynMenu,
             collector: Callable[[str, list[str]], str] = base_collector,
             separator: Callable[[str], list[str]] = base_separator
-    ) -> Callable[[Callable[Concatenate[MessageInteraction, P], Any]], Callable[P, BaseSelect]]:
+    ) -> Callable[[
+            Callable[Concatenate[MessageInteraction, P], Any] |
+            Callable[Concatenate[Any, MessageInteraction, P], Any]
+    ], Callable[P, BaseSelect]]:
         collision = self._get_select_menu_ident_collision(ident)
         if collision is not None:
             raise ValueError(f"Ident of modal `{ident}` has collision this `{collision}`")
 
         def builder(
-                func: Callable[Concatenate[MessageInteraction, P], Any]
+                func: Callable[Concatenate[MessageInteraction, P], Any] |
+                      Callable[Concatenate[Any, MessageInteraction, P], Any]
         ) -> Callable[P, BaseSelect]:
 
             _original_sign = inspect.signature(func)
+            unbound_method = False
+            self_arg = None
 
-            if len(_original_sign.parameters) < 2:
-                raise TypeError(
-                    f"Invalid function structure, argument {MessageInteraction} is required in first position, "
-                    f"and {list} in second position")
+            if inspect.isfunction(func):
+                if is_unbound_method(func):
+                    unbound_method = True
+                    if len(_original_sign.parameters) < 3:
+                        raise TypeError(
+                            f"Invalid function structure, argument {MessageInteraction} is required in first position,"
+                            f" and {list} in second position")
 
-            _first_param, _second_param, *_other_params = _original_sign.parameters.values()
-            if _first_param.annotation not in (MessageInteraction, Signature.empty):
-                raise TypeError(
-                    f"Invalid first argument annotation,"
-                    f" it should not be there or its type should be {MessageInteraction}")
+                    _self, _first_param, _second_param, *_other_params = _original_sign.parameters.values()
+                    if _first_param.annotation not in (MessageInteraction, Signature.empty):
+                        raise TypeError(
+                            f"Invalid first argument annotation,"
+                            f" it should not be there or its type should be {MessageInteraction}")
 
-            if _second_param.annotation not in (list, Signature.empty):
-                raise TypeError(
-                    f"Invalid first argument annotation,"
-                    f" it should not be there or its type should be {list}")
+                    if _second_param.annotation not in (list, Signature.empty):
+                        raise TypeError(
+                            f"Invalid second argument annotation,"
+                            f" it should not be there or its type should be {list}")
+                else:
+                    if len(_original_sign.parameters) < 2:
+                        raise TypeError(
+                            f"Invalid function structure, argument {MessageInteraction} is required in first position,"
+                            f" and {list} in second position")
+
+                    _first_param, _second_param, *_other_params = _original_sign.parameters.values()
+                    if _first_param.annotation not in (MessageInteraction, Signature.empty):
+                        raise TypeError(
+                            f"Invalid first argument annotation,"
+                            f" it should not be there or its type should be {MessageInteraction}")
+
+                    if _second_param.annotation not in (list, Signature.empty):
+                        raise TypeError(
+                            f"Invalid first argument annotation,"
+                            f" it should not be there or its type should be {list}")
+            else:
+                raise TypeError(f"Decorator must receive a function, but receives {type(func)}")
 
             sign = _original_sign.replace(parameters=_other_params)
 
@@ -409,10 +508,16 @@ class DynComponents:
                     return
                 custom_id_data = separator(custom_id)
                 casted_kwargs = self._convert_kwargs_from_strings(sign, custom_id_data)
-                await func(inter, inter.resolved_values, **casted_kwargs)  # type: ignore
+                if unbound_method:
+                    await func(self_arg, inter, inter.resolved_values, **casted_kwargs)  # type: ignore
+                else:
+                    await func(inter, inter.resolved_values, **casted_kwargs)  # type: ignore
 
             def wrapper(*args: P.args, **kwargs: P.kwargs) -> BaseSelect:
+                nonlocal self_arg
                 # args to kwargs
+                if unbound_method:
+                    self_arg, *args = args
                 casted_kwargs = dict(zip(sign.parameters.keys(), args))
                 casted_kwargs.update(kwargs)
                 self._args_type_checker(sign, casted_kwargs)

@@ -10,9 +10,8 @@ class MyCog(Cog):
 
     components = DynComponents()  # no args or None
 
-    @staticmethod
     @components.create_button("random", label="random!")
-    async def random_number(inter: MessageInteraction, a: int, b: int):
+    async def random_number(self, inter: MessageInteraction, a: int, b: int):
         await inter.send(f"You random number: {random.randint(a, b)}")
 
     def __init__(self, bot: MyClient):
